@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>euteamoo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"> 
+    <style>
+        /* --- Variáveis de Cor --- */
+        :root {
+            --neon-pink: #ff88c0;
+            --neon-purple: #c088ff;
+            --neon-light: #ffb0e0;
+            --bg-dark: #030015;
+            --shadow-pink: rgba(255, 200, 240, 0.4);
+            --shadow-purple: rgba(192, 143, 255, 0.3);
+            --shadow-red: rgba(255, 148, 176, 0.2);
+            --card-bg: rgba(20, 0, 50, 0.8);
+        }
+
+        /* --- Estilos Globais --- */
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{
+            height:100%;
+            background:var(--bg-dark);
+            font-family:'Poppins', sans-serif; 
+            cursor: default;
+        }
+
+        canvas{
+            display:block;
+            position:absolute;
+            top:0;left:0;
+            width:100%;height:100%;
+            pointer-events:none;
+        }
+
+        /* --- Tela de Inicialização (Gate) --- */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100; /* Deve estar acima de tudo */
+            transition: opacity 0.5s ease-out;
+        }
+
+        #splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .click-text {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            animation: neon-blink 1.5s infinite alternate;
+            text-shadow: 0 0 10px var(--neon-light);
+        }
+
+        @keyframes neon-blink {
+            0% { text-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-purple); }
+            100% { text-shadow: 0 0 15px var(--neon-light), 0 0 25px var(--neon-pink); }
+        }
+
+        /* --- Conteúdo Principal (Inicialmente Escondido) --- */
+        .content-wrapper {
+            opacity: 0;
+            height: 100%; /* Ocupa o espaço total */
+            transition: opacity 1s ease-in;
+        }
+        .content-wrapper.active {
+            opacity: 1;
+        }
+
+        .foreground{
+            position:absolute;
+            inset:0;
+            display:flex;
+            align-items: center; 
+            justify-content: center;
+            flex-direction: column;
+            pointer-events:none;
+            z-index:20;
+        }
+
+        /* --- Estilos do Crédito "by agonizar" --- */
+        .credit {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: var(--neon-light);
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--neon-light);
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        /* --- Estilos dos Controles de Música (AJUSTADO) --- */
+        .audio-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 30;
+            background: rgba(0, 0, 0, 0.5); /* Fundo mais escuro */
+            border-radius: 10px;
+            box-shadow: 0 0 15px var(--shadow-purple);
+            padding: 8px 12px; /* Mais padding */
+        }
+
+        .audio-player {
+            /* Largura AUMENTADA para resolver o bug de espaço */
+            width: 250px; 
+            filter: invert(1) hue-rotate(240deg) brightness(0.9); 
+        }
+
+        /* --- Estilos dos Cartões (Mantidos Maiores) --- */
+        .profile-container {
+            display: flex;
+            gap: 70px;
+            pointer-events: all;
+            position: relative;
+        }
+
+        .profile-card {
+            width: 280px;
+            height: 360px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(180deg, var(--card-bg) 70%, rgba(20, 0, 50, 0) 100%);
+            border-radius: 25px; 
+            padding-top: 40px; 
+            box-shadow: 0 0 25px rgba(192, 143, 255, 0.4); 
+            backdrop-filter: blur(8px);
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-10px) scale(1.05);
+        }
+
+        .profile-pic-frame {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: var(--neon-pink);
+            border: 6px solid var(--neon-light);
+            box-shadow: 0 0 20px var(--neon-light);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+
+        .profile-pic-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+        }
+
+        .profile-name {
+            color: white;
+            font-size: 1.4rem; 
+            font-weight: 700;
+            letter-spacing: 1px; 
+            text-shadow: 0 0 7px var(--neon-light);
+        }
+
+        /* --- Estilo dos Botões de Rede Social --- */
+        .social-button {
+            position: absolute;
+            top: 15px; 
+            right: 15px;
+            width: 35px;
+            height: 35px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            line-height: 0;
+            border-radius: 50%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .social-button:hover {
+            transform: scale(1.15);
+            box-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        .social-button img {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 5px var(--neon-pink)) brightness(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="splash-screen">
+        <div class="click-text">chega ai, só clicar</div>
+    </div>
+
+    <div class="content-wrapper">
+        <canvas id="stars"></canvas>
+        <canvas id="particles"></canvas>
+        <canvas id="meteors"></canvas>
+
+        <div class="foreground">
+            <div class="profile-container">
+                <div class="profile-card">
+                    <a href="https://www.instagram.com/_nscaco/" target="_blank" class="social-button" title="Instagram Agonizar">
+                        <img src="https://cdn.discordapp.com/attachments/1174489714649210941/1430339259646349412/RS5wbmc.png?ex=68f96abd&is=68f8193d&hm=275aa3458cc97ccb3787fb6704262f3ac423da1eb405e4afb4f4088d6d1c7613&" alt="Ícone Social">
+                    </a>
+                    <div class="profile-pic-frame">
+                        <img src="https://cdn.discordapp.com/attachments/1429592473553997947/1430339626350018590/18b409fc37a3038eadd36a1f34f37294.jpg?ex=68f96b15&is=68f81995&hm=36701d9f3e352a809079e5420e975549a221ad28edd08f64dc9e52143a0e6a88&" alt="Foto Agonizar">
+                    </div>
+                    <div class="profile-name">Agonizar</div>
+                </div>
+
+                <div class="profile-card">
+                    <a href="https://www.instagram.com/lostedsoully/" target="_blank" class="social-button" title="Instagram Malu">
+                        <img src="https://cdn.discordapp.com/attachments/1174489714649210941/1430339259646349412/RS5wbmc.png?ex=68f96abd&is=68f8193d&hm=275aa3458cc97ccb3787fb6704262f3ac423da1eb405e4afb4f4088d6d1c7613&" alt="Ícone Social">
+                    </a>
+                    <div class="profile-pic-frame">
+                        <img src="https://cdn.discordapp.com/attachments/1429592473553997947/1430339662379225160/ecd7d68d8c862c9b550df7360ad9669e.jpg?ex=68f96b1d&is=68f8199d&hm=45e5f614fde5442004e25f22419d1b0aa410947fd3fa1e32985ce2888f0e62e2&" alt="Foto Malu">
+                    </div>
+                    <div class="profile-name">Malu</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="credit">by agonizar</div>
+
+        <div class="audio-container">
+            <audio id="background-music" class="audio-player" controls loop>
+                <source src="Joji - PIXELATED KISSES.mp3" type="audio/mpeg">
+                Seu navegador não suporta a tag de áudio.
+            </audio>
+        </div>
+    </div>
+
+    <script>
+        // === CONTROLE DA TELA DE CLIQUE ===
+        const splashScreen = document.getElementById('splash-screen');
+        const contentWrapper = document.querySelector('.content-wrapper');
+        const backgroundMusic = document.getElementById('background-music');
+
+        splashScreen.addEventListener('click', () => {
+            // 1. Inicia a música (após a interação do usuário)
+            backgroundMusic.play().catch(error => {
+                console.log("Erro ao tentar iniciar a música (pode ser devido a restrições do navegador):", error);
+            });
+
+            // 2. Esconde a tela de clique
+            splashScreen.classList.add('hidden');
+
+            // 3. Mostra o conteúdo principal (com fade-in)
+            contentWrapper.classList.add('active');
+            
+            // 4. Inicia as animações (já que o conteúdo está ativo)
+            drawStars();
+            drawParticles();
+            drawMeteors();
+        });
+
+
+        // === FUNÇÕES DE ANIMAÇÃO ===
+        const dpr = devicePixelRatio || 1;
+        // As canvases são globais, mas só iniciam o desenho após o clique
+        const starsCanvas = document.getElementById('stars'), ctx = starsCanvas.getContext('2d');
+        const particlesCanvas = document.getElementById('particles'), pctx = particlesCanvas.getContext('2d');
+        const meteorsCanvas = document.getElementById('meteors'), mctx = meteorsCanvas.getContext('2d');
+
+        let mouse = { x: 0.5, y: 0.5 }; 
+
+        function resize(){  
+            starsCanvas.width = innerWidth*dpr; starsCanvas.height = innerHeight*dpr;
+            particlesCanvas.width = innerWidth*dpr; particlesCanvas.height = innerHeight*dpr;
+            meteorsCanvas.width = innerWidth*dpr; meteorsCanvas.height = innerHeight*dpr;
+        }
+        resize();
+        window.addEventListener('resize',resize);
+        window.addEventListener('mousemove', e => {
+            mouse.x = e.clientX / window.innerWidth;
+            mouse.y = e.clientY / window.innerHeight;
+        });
+
+        // --- Starfield com Parallax ---
+        let stars=[];
+        const STAR_COUNT = Math.floor((innerWidth*innerHeight)/9000);
+        for(let i=0;i<STAR_COUNT;i++){
+            stars.push({x:Math.random()*innerWidth*dpr,y:Math.random()*innerHeight*dpr,z:Math.random()*1.5+0.5,r:Math.random()*1.5+0.5});
+        }
+
+        // As chamadas para requestAnimationFrame foram movidas para o evento 'click'
+        function drawStars(){
+            ctx.clearRect(0,0,starsCanvas.width,starsCanvas.height);
+            ctx.save();
+            ctx.scale(dpr,dpr);
+
+            const dx = (mouse.x - 0.5) * 5; 
+            const dy = (mouse.y - 0.5) * 5; 
+
+            for(let s of stars){
+                const parallaxX = dx * s.z * 0.5; 
+                const parallaxY = dy * s.z * 0.5;
+
+                let finalX = (s.x / dpr + parallaxX) % innerWidth;
+                let finalY = (s.y / dpr + parallaxY) % innerHeight;
+
+                if (finalX < 0) finalX += innerWidth;
+                if (finalY < 0) finalY += innerHeight;
+
+                ctx.beginPath();
+                ctx.fillStyle=`rgba(255,255,255,${0.3 + s.z*0.3 + Math.random()*0.3})`;
+                ctx.arc(finalX, finalY, s.r*s.z*0.8, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+            // Garante que a animação continue após o primeiro clique
+            if (!splashScreen.classList.contains('hidden')) return;
+            requestAnimationFrame(drawStars);
+        }
+
+        // --- Particles (Corações e Estrelinhas no Clique) ---
+        let particles=[];
+        
+        function drawStar(ctx, s, size){
+            const r1 = size / 2;
+            const r2 = size / 4; 
+            ctx.beginPath();
+            for (let i = 0; i < 4; i++) {
+                const angle = (Math.PI / 2) * i;
+                ctx.lineTo(r1 * Math.cos(angle), r1 * Math.sin(angle));
+                ctx.lineTo(r2 * Math.cos(angle + Math.PI / 4), r2 * Math.sin(angle + Math.PI / 4));
+            }
+            ctx.closePath();
+        }
+
+        function spawnParticle(x,y, type='heart'){
+            particles.push({
+                x,y,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.8)*1.5,size:4+Math.random()*8,age:0,life:200+Math.random()*150,rot:Math.random()*Math.PI*2,type: type, 
+                color: type === 'star' ? `rgba(255,255,255,` : `rgba(255,120,200,`
+            });
+        }
+
+        function drawParticles(){
+            pctx.clearRect(0,0,particlesCanvas.width,particlesCanvas.height);
+            pctx.save(); pctx.scale(dpr,dpr);
+
+            for(let i=particles.length-1;i>=0;i--){
+                let p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.age++;
+                let prog=p.age/p.life;
+                let alpha=Math.max(0,1-prog)*0.7;
+
+                pctx.save(); pctx.translate(p.x/dpr,p.y/dpr); pctx.rotate(p.rot);
+
+                if(p.type === 'heart'){
+                    const s=p.size/2;
+                    pctx.beginPath();
+                    pctx.moveTo(0,-s/2); pctx.bezierCurveTo(s,-s*1.2,s*1.6,-s*0.1,0,s);
+                    pctx.bezierCurveTo(-s*1.6,-s*0.1,-s,-s*1.2,0,-s/2);
+                    pctx.fillStyle=`rgba(255,120,200,${alpha})`; pctx.fill();
+                } else if (p.type === 'star') {
+                    drawStar(pctx, p, p.size);
+                    pctx.fillStyle=`rgba(255,255,255,${alpha * 1.5})`; 
+                    pctx.fill();
+                }
+                
+                pctx.restore();
+
+                if(p.age>p.life) particles.splice(i,1);
+            }
+            pctx.restore();
+            // Garante que a animação continue
+            if (!splashScreen.classList.contains('hidden')) return;
+            requestAnimationFrame(drawParticles);
+        }
+
+        window.addEventListener('pointerdown',e=>{
+             if (splashScreen.classList.contains('hidden')) {
+                for(let i=0;i<10;i++){
+                    const type = Math.random() < 0.3 ? 'star' : 'heart'; 
+                    spawnParticle(e.clientX*dpr+Math.random()*50-25, e.clientY*dpr+Math.random()*50-25, type);
+                }
+            }
+        });
+
+        // Este intervalo também deve começar apenas após o clique
+        let particleInterval;
+
+        function startParticleInterval() {
+             particleInterval = setInterval(()=>{spawnParticle(Math.random()*innerWidth*dpr, innerHeight*dpr+10, 'heart');},70);
+        }
+
+        // --- Meteors ---
+        let meteors=[];
+        function spawnMeteor(){
+            meteors.push({x:Math.random()*innerWidth*dpr,y:-10,vx:2+Math.random()*3,vy:3+Math.random()*2,length:10+Math.random()*20});
+        }
+        
+        let meteorInterval;
+
+        function drawMeteors(){
+            mctx.clearRect(0,0,meteorsCanvas.width,meteorsCanvas.height);
+            mctx.save(); mctx.scale(dpr,dpr);
+            for(let i=meteors.length-1;i>=0;i--){
+                let m=meteors[i]; m.x+=m.vx; m.y+=m.vy;
+                
+                mctx.beginPath(); 
+                mctx.strokeStyle=`rgba(255,220,255,0.8)`; 
+                mctx.lineWidth=2;
+                mctx.moveTo(m.x/dpr,m.y/dpr); 
+                mctx.lineTo((m.x-m.length*m.vx*0.5)/dpr,(m.y-m.length*m.vy*0.5)/dpr); 
+                mctx.stroke();
+
+                if(m.x>innerWidth*dpr||m.y>innerHeight*dpr) meteors.splice(i,1);
+            }
+            mctx.restore(); 
+            // Garante que a animação continue
+            if (!splashScreen.classList.contains('hidden')) return;
+            requestAnimationFrame(drawMeteors);
+        }
+        
+        // As chamadas de intervalo para partículas e meteoros são movidas para o evento de clique.
+        splashScreen.addEventListener('click', () => {
+             // ... código de música e transição de tela
+             
+             // Inicia os intervalos
+             startParticleInterval();
+             meteorInterval = setInterval(spawnMeteor,150); 
+        }, { once: true });
+    </script>
+</body>
+</html>
